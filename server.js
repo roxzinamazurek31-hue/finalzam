@@ -33,7 +33,12 @@ if (!BOT_TOKEN || !ADMIN_CHAT_ID) {
 }
 
 // Telegram client for direct API sends.
-const api = BOT_TOKEN ? new Api(BOT_TOKEN) : null;
+const api = BOT_TOKEN
+  ? new Api(BOT_TOKEN, {
+      timeoutMs: 15000,
+      maxRetries: 0,
+    })
+  : null;
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
